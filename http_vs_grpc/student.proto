@@ -1,0 +1,31 @@
+syntax="proto3";  
+
+option go_package="./;student_service";  
+
+message Student {            
+  string name = 1;                 //姓名
+  int64 created_at = 2;            //创建时间
+  repeated string Locations = 4;   //区域
+  map<string,float> Scores = 3;    //考试成绩
+  bool Gender = 5;                 //性别
+  int32 Age = 6[deprecated = true];//年龄
+  float Height = 7;                //身高
+  int32 Id = 8;                    //学生ID
+}
+
+message Students { 
+    repeated Student Data = 1;
+}
+
+message StudentID{
+    int32 Id = 1;  
+}
+
+message StudentIDs{
+    repeated int32 Ids = 1;  
+}
+
+service StudentService{
+    rpc GetStudent(StudentID) returns (Student);
+}
+// protoc --go_out=./micro_service/grpc --go-grpc_out=./micro_service/grpc --proto_path=./micro_service/grpc student.proto        

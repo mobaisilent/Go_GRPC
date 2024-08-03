@@ -421,3 +421,81 @@ func main() {
 
 # TLS认证编写
 
+## 生成证书
+
+### openssl
+
+https://slproweb.com/products/Win32OpenSSL.html
+
+### 在线生成
+
+https://www.ssleye.com/ssltool/self_sign.html
+
+主要得到下面两个文件
+
+- 私钥
+- 公钥
+
+![image-20240803181157027](./images/image-20240803181157027.png)
+
+## 代码
+
+### 服务端
+
+```go
+func main() {
+	// 自签证书和私钥文件    -- 主要改动代码在这里
+	creds, err := credentials.NewServerTLSFromFile("../key/test.pem", "../key/test.key")
+	if err != nil {
+		log.Fatalf("Failed to generate credentials %v", err)
+	}
+
+	// 开启端口
+	listen, err := net.Listen("tcp", ":9090")
+	if err != nil {
+		log.Fatalf("Failed to listen on port 9090: %v", err)
+	}
+
+	// 创建grpc服务
+	grpcServer := grpc.NewServer(grpc.Creds(creds)) // 传入证书
+
+	// 在grpc服务上注册自己编写的服务
+	pb.RegisterSayHelloServer(grpcServer, &server{})
+
+	// 启动grpc服务
+	err = grpcServer.Serve(listen)
+	if err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
+}
+```
+
+### 客户端
+
+```go
+func main() {
+	creds, err := credentials.NewClientTLSFromFile("../key/test.pem", "test.com")
+	if err != nil {
+		log.Fatalf("Failed to generate credentials %v", err)
+	}
+
+	// 连接到server端，此处启用安全传输，包括加密和验证
+	conn, err := grpc.Dial("localhost:9090", grpc.WithTransportCredentials(creds))
+	if err != nil {
+		log.Fatalf("Failed to connect: %v", err)
+	}
+	defer conn.Close()
+	// go语言标准连接处理
+
+	// 创建一个客户端
+	client := pb.NewSayHelloClient(conn)
+
+	resp, err := client.SayHello(context.Background(), &pb.HelloRequest{RequestName: "mobaiclient", Age: 18, Name: []string{"mobai", "mobai2"}})
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+
+	fmt.Println(resp.GetResponseMsg())
+}
+```
+
